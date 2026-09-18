@@ -1595,26 +1595,40 @@
             </div>
 
             <div class="daily-card" style="border-right-color: #2c7a4b; margin-top: 20px;">
-                <h3>🏬 موجودی آرد بر اساس آخرین شمارش آردخانه</h3>
+                <h3>🏬 موجودی بر اساس آخرین شمارش انبار</h3>
                 <div class="info-text">
-                    این محاسبه با محاسبه‌ی «کل ماه» بالا فرق دارد: به‌جای شروع از اول ماه، از یک نقطه‌ی مرجع که خودتان واقعاً داخل آردخانه شمرده‌اید شروع می‌کند. مثلاً اگر یک روز داخل آردخانه شمردید و ۶ کیسه باقی مانده بود، همان روز را و همان عدد ۶ را اینجا ثبت کنید. از فردای همان روز به بعد، هر چه در «آرد ورودی» و «کیسه آرد مصرفی» (تب روزانه) ثبت کرده باشید، روی همین ۶ کیسه اضافه یا کم می‌شود تا موجودی واقعی امروز به دست بیاید.
+                    این محاسبه با محاسبه‌ی «کل ماه» بالا فرق دارد: به‌جای شروع از اول ماه، از یک نقطه‌ی مرجع که خودتان واقعاً شمرده‌اید شروع می‌کند. اول «ماده» و «واحد شمارش» را انتخاب کنید، بعد مثلاً اگر یک روز واقعاً شمردید و ۶ کیسه باقی مانده بود، همان روز و همان عدد ۶ را ثبت کنید. از فردای همان روز، هر چه در تب «روزانه» برای همین ماده و واحد ثبت کرده باشید، روی همان عدد اضافه یا کم می‌شود تا موجودی واقعی امروز به دست بیاید. هر ماده و واحد، مرجع جداگانه‌ی خودش را دارد.
+                </div>
+                <div class="input-group">
+                    <label>ماده:</label>
+                    <select id="warehouseMaterial" onchange="onWarehouseMaterialChange()" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 15px; font-family: inherit;">
+                        <option value="flour">🌾 آرد</option>
+                        <option value="bran">🟤 سبوس</option>
+                        <option value="salt">🧂 نمک</option>
+                        <option value="yeastDry">🧪 مایه خشک</option>
+                        <option value="yeastWet">💧 مایه تر</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>واحد شمارش:</label>
+                    <select id="warehouseUnit" onchange="onWarehouseUnitChange()" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 15px; font-family: inherit;"></select>
                 </div>
                 <div class="input-group">
                     <label>تاریخ این شمارش (شمسی):</label>
                     <div class="jalali-picker" id="warehouseBaselineDate_picker"></div>
                 </div>
                 <div class="input-group">
-                    <label>موجودی واقعی آردخانه در همین تاریخ (کیسه):</label>
+                    <label id="warehouseBaselineCountLabel">موجودی واقعی در همین تاریخ:</label>
                     <input type="number" id="warehouseBaselineCount" placeholder="مثل: 6" min="0" step="0.5">
                 </div>
                 <button class="btn btn-secondary" onclick="saveWarehouseBaseline()">💾 ثبت این شمارش به‌عنوان مرجع</button>
                 <div id="warehouseBaselineCurrent" class="info-text" style="margin-top: 10px;"></div>
 
                 <div class="input-group" style="margin-top: 15px;">
-                    <label>محاسبه موجودی آردخانه تا تاریخ:</label>
+                    <label>محاسبه موجودی تا تاریخ:</label>
                     <div class="jalali-picker" id="warehouseCalcTo_picker"></div>
                 </div>
-                <button class="btn btn-primary" onclick="calculateWarehouseInventory()">📊 محاسبه موجودی آردخانه</button>
+                <button class="btn btn-primary" onclick="calculateWarehouseInventory()">📊 محاسبه موجودی</button>
                 <div id="warehouseInventoryResult"></div>
             </div>
 
@@ -2941,7 +2955,7 @@
                 performSearch();
             } else if (tabName === 'flourStock') {
                 initFlourStockSelectors();
-                loadWarehouseBaselineDisplay();
+                onWarehouseMaterialChange();
             }
         }
 
@@ -6355,7 +6369,81 @@
         }
         // ===================== End Month-over-Month Comparison =====================
 
+        // ===================== Warehouse Baseline Inventory (multi-material) =====================
+        // Each material/unit combo (e.g. "آرد" in کیسه, "مایه خشک" in دانه) has its own
+        // independent baseline reference point, since they're physically counted separately.
+        const WAREHOUSE_MATERIALS = {
+            flour: {
+                label: 'آرد',
+                units: {
+                    bags: { label: 'کیسه', incoming: 'flourIncoming', consumed: 'flourBags' }
+                }
+            },
+            bran: {
+                label: 'سبوس',
+                units: {
+                    bags: { label: 'کیسه', incoming: 'branIncoming', consumed: 'branConsumed' }
+                }
+            },
+            salt: {
+                label: 'نمک',
+                units: {
+                    bags: { label: 'کیسه', incoming: 'saltIncomingBags', consumed: 'saltConsumedBags' },
+                    kg: { label: 'کیلوگرم', incoming: 'saltIncomingWeightKg', consumed: 'saltConsumedWeightKg' }
+                }
+            },
+            yeastDry: {
+                label: 'مایه خشک',
+                units: {
+                    pieces: { label: 'دانه', incoming: 'yeastDryPieces', consumed: 'yeastDryOutgoingPieces' },
+                    cartons: { label: 'کارتن', incoming: 'yeastDryCartons', consumed: 'yeastDryOutgoingCartons' },
+                    kg: { label: 'کیلوگرم', incoming: 'yeastDryWeightKg', consumed: 'yeastDryOutgoingWeightKg' }
+                }
+            },
+            yeastWet: {
+                label: 'مایه تر',
+                units: {
+                    pieces: { label: 'دانه', incoming: 'yeastWetPieces', consumed: 'yeastWetOutgoingPieces' },
+                    cartons: { label: 'کارتن', incoming: 'yeastWetCartons', consumed: 'yeastWetOutgoingCartons' },
+                    kg: { label: 'کیلوگرم', incoming: 'yeastWetWeightKg', consumed: 'yeastWetOutgoingWeightKg' }
+                }
+            }
+        };
+
+        // The original flour/bags baseline keeps its original (unsuffixed) storage key so
+        // it stays backward-compatible with the "موجودی باقیمانده" figure in the monthly
+        // totals box above, which was already reading this exact key.
+        function warehouseBaselineKey(material, unit) {
+            if (material === 'flour' && unit === 'bags') return 'bakery2_warehouseBaseline';
+            return `bakery2_warehouseBaseline_${material}_${unit}`;
+        }
+
+        function getSelectedWarehouseMaterialUnit() {
+            const material = document.getElementById('warehouseMaterial').value;
+            const unit = document.getElementById('warehouseUnit').value;
+            return { material, unit, def: WAREHOUSE_MATERIALS[material].units[unit] };
+        }
+
+        // Rebuilds the unit dropdown's options to match whichever material was just
+        // selected (flour/bran only have "کیسه"; salt adds "کیلوگرم"; yeast has all three).
+        function onWarehouseMaterialChange() {
+            const material = document.getElementById('warehouseMaterial').value;
+            const unitSelect = document.getElementById('warehouseUnit');
+            const units = WAREHOUSE_MATERIALS[material].units;
+            unitSelect.innerHTML = Object.keys(units).map(u => `<option value="${u}">${units[u].label}</option>`).join('');
+            onWarehouseUnitChange();
+        }
+
+        function onWarehouseUnitChange() {
+            const { material, unit, def } = getSelectedWarehouseMaterialUnit();
+            document.getElementById('warehouseBaselineCountLabel').textContent =
+                `موجودی واقعی ${WAREHOUSE_MATERIALS[material].label} در همین تاریخ (${def.label}):`;
+            document.getElementById('warehouseInventoryResult').innerHTML = '';
+            loadWarehouseBaselineDisplay();
+        }
+
         function saveWarehouseBaseline() {
+            const { material, unit, def } = getSelectedWarehouseMaterialUnit();
             const date = getJalaliPickerValue('warehouseBaselineDate');
             const count = parseFloat(document.getElementById('warehouseBaselineCount').value);
 
@@ -6364,29 +6452,31 @@
                 return;
             }
             if (isNaN(count) || count < 0) {
-                alert('لطفاً موجودی واقعی آردخانه را وارد کنید');
+                alert(`لطفاً موجودی واقعی ${WAREHOUSE_MATERIALS[material].label} را وارد کنید`);
                 return;
             }
 
-            localStorage.setItem('bakery2_warehouseBaseline', JSON.stringify({ date, count }));
-            showSuccess('✅ شمارش آردخانه ثبت شد');
+            localStorage.setItem(warehouseBaselineKey(material, unit), JSON.stringify({ date, count }));
+            showSuccess(`✅ شمارش ${WAREHOUSE_MATERIALS[material].label} (${def.label}) ثبت شد`);
             loadWarehouseBaselineDisplay();
-            // Also refresh the monthly totals box above, so "موجودی باقیمانده" there
+            // Also refresh the monthly totals box above (only relevant for the flour/bags
+            // baseline, since that's the only one it reads), so "موجودی باقیمانده" there
             // immediately reflects this new baseline instead of the old drifted number
-            calculateFlourStock();
+            if (material === 'flour' && unit === 'bags') calculateFlourStock();
         }
 
         function loadWarehouseBaselineDisplay() {
             const currentDiv = document.getElementById('warehouseBaselineCurrent');
             if (!currentDiv) return;
-            const baseline = JSON.parse(localStorage.getItem('bakery2_warehouseBaseline') || 'null');
+            const { material, unit, def } = getSelectedWarehouseMaterialUnit();
+            const baseline = JSON.parse(localStorage.getItem(warehouseBaselineKey(material, unit)) || 'null');
 
             if (!baseline) {
-                currentDiv.innerHTML = '<span style="color:#999;">هنوز هیچ شمارشی به‌عنوان مرجع ثبت نشده — ابتدا موجودی واقعی آردخانه را در یک تاریخ مشخص ثبت کنید.</span>';
+                currentDiv.innerHTML = `<span style="color:#999;">هنوز هیچ شمارشی برای ${WAREHOUSE_MATERIALS[material].label} (${def.label}) به‌عنوان مرجع ثبت نشده — ابتدا موجودی واقعی را در یک تاریخ مشخص ثبت کنید.</span>`;
                 return;
             }
 
-            currentDiv.innerHTML = `مرجع فعلی: <b>${baseline.count.toLocaleString('fa-IR')} کیسه</b> در تاریخ <b>${formatJalaliDisplay(baseline.date)}</b>`;
+            currentDiv.innerHTML = `مرجع فعلی: <b>${baseline.count.toLocaleString('fa-IR')} ${def.label}</b> در تاریخ <b>${formatJalaliDisplay(baseline.date)}</b>`;
         }
 
         // Jumps the baseline date picker to a given date (e.g. "today", after the user
@@ -6402,10 +6492,12 @@
 
         function calculateWarehouseInventory() {
             const resultDiv = document.getElementById('warehouseInventoryResult');
-            const baseline = JSON.parse(localStorage.getItem('bakery2_warehouseBaseline') || 'null');
+            const { material, unit, def } = getSelectedWarehouseMaterialUnit();
+            const materialLabel = WAREHOUSE_MATERIALS[material].label;
+            const baseline = JSON.parse(localStorage.getItem(warehouseBaselineKey(material, unit)) || 'null');
 
             if (!baseline) {
-                resultDiv.innerHTML = '<p class="no-data" style="color:#e74c3c;">ابتدا یک شمارش مرجع برای آردخانه ثبت کنید</p>';
+                resultDiv.innerHTML = `<p class="no-data" style="color:#e74c3c;">ابتدا یک شمارش مرجع برای ${materialLabel} (${def.label}) ثبت کنید</p>`;
                 return;
             }
 
@@ -6428,8 +6520,8 @@
             // state right before that day's own incoming/consumed entries get applied.
             Object.keys(allData).forEach(date => {
                 if (date >= baseline.date && date <= toDate) {
-                    const inc = allData[date].flourIncoming || 0;
-                    const cons = allData[date].flourBags || 0;
+                    const inc = allData[date][def.incoming] || 0;
+                    const cons = allData[date][def.consumed] || 0;
                     totalIncomingSince += inc;
                     totalConsumedSince += cons;
                     if (inc || cons) {
@@ -6455,15 +6547,15 @@
                 <div class="daily-card" style="border-right-color: #2c7a4b; margin-top: 15px;">
                     <div class="stat">
                         <span class="stat-label">مرجع (${formatJalaliDisplay(baseline.date)}):</span>
-                        <span class="stat-value">${baseline.count.toLocaleString('fa-IR')} کیسه</span>
+                        <span class="stat-value">${baseline.count.toLocaleString('fa-IR')} ${def.label}</span>
                     </div>
                     <div class="stat">
-                        <span class="stat-label">جمع آرد ورودی از ${formatJalaliDisplay(baseline.date)} تا ${formatJalaliDisplay(toDate)}:</span>
-                        <span class="stat-value">${totalIncomingSince.toLocaleString('fa-IR')} کیسه</span>
+                        <span class="stat-label">جمع ${materialLabel} ورودی از ${formatJalaliDisplay(baseline.date)} تا ${formatJalaliDisplay(toDate)}:</span>
+                        <span class="stat-value">${totalIncomingSince.toLocaleString('fa-IR')} ${def.label}</span>
                     </div>
                     <div class="stat">
-                        <span class="stat-label">جمع آرد مصرفی از ${formatJalaliDisplay(baseline.date)} تا ${formatJalaliDisplay(toDate)}:</span>
-                        <span class="stat-value">${totalConsumedSince.toLocaleString('fa-IR')} کیسه</span>
+                        <span class="stat-label">جمع ${materialLabel} مصرفی از ${formatJalaliDisplay(baseline.date)} تا ${formatJalaliDisplay(toDate)}:</span>
+                        <span class="stat-value">${totalConsumedSince.toLocaleString('fa-IR')} ${def.label}</span>
                     </div>
                     <details style="margin: 4px 0 8px;">
                         <summary style="cursor: pointer; font-size: 12.5px; color: #3498db;">ریز ورودی/مصرفی هر روز (برای پیدا کردن مغایرت)</summary>
@@ -6472,8 +6564,8 @@
                         </div>
                     </details>
                     <div class="stat" style="border-top: 2px solid #8B4513; margin-top: 8px; padding-top: 8px;">
-                        <span class="stat-label">موجودی واقعی آردخانه تا ${formatJalaliDisplay(toDate)}:</span>
-                        <span class="stat-value" style="color: ${inventoryColor}; font-weight: 700;">${currentInventory.toLocaleString('fa-IR')} کیسه</span>
+                        <span class="stat-label">موجودی واقعی ${materialLabel} تا ${formatJalaliDisplay(toDate)}:</span>
+                        <span class="stat-value" style="color: ${inventoryColor}; font-weight: 700;">${currentInventory.toLocaleString('fa-IR')} ${def.label}</span>
                     </div>
                     <button type="button" class="btn btn-secondary" style="margin-top: 10px; font-size: 13px;" onclick="prefillWarehouseBaselineFromDate('${toDate}')">
                         🔄 اگر همین امروز (${formatJalaliDisplay(toDate)}) را واقعاً شمردید، اینجا را بزنید تا فرم بالا با همین تاریخ پر شود

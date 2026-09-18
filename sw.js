@@ -2,7 +2,7 @@
 // offline once it has been visited at least once over a proper https connection.
 // Bump CACHE_NAME whenever you upload a new version of index.html so
 // visitors get the fresh copy instead of a stale cached one.
-const CACHE_NAME = 'bakery-app-cache-v10';
+const CACHE_NAME = 'bakery-app-cache-v11';
 const PRECACHE_URLS = [
     './',
     './index.html',
