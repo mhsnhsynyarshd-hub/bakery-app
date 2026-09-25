@@ -1,6 +1,0 @@
-{
-  "note": "این فایل رو خود صاحب برنامه (نه کاربر نهایی) هر وقت خواست عوض می‌کنه تا تبلیغ یا پیام جدید بفرسته. کاربر نهایی فقط باید یک‌بار در روز اینترنت داشته باشه تا این فایل رو دریافت کنه.",
-  "updatedAt": "2026-09-19",
-  "message": "لطفاً VPN را حتماً روشن کنید تا آخرین به‌روزرسانی‌ها برای شما بیاید، و لطفاً صفحه را چند بار رفرش کنید (یا به پایین بکشید) تا اعمال شود.",
-  "adHtml": "<div style=\"background:#fff3cd; color:#664d03; border-top:2px solid #ffc107; padding:10px 14px; font-size:13px; line-height:1.8; display:flex; align-items:center; justify-content:space-between; gap:10px;\"><span>🔄 لطفاً VPN را حتماً روشن کنید تا آخرین به‌روزرسانی‌ها برای شما بیاید، و لطفاً صفحه را چند بار رفرش کنید (یا به پایین بکشید) تا اعمال شود.</span><button onclick=\"document.getElementById('adBannerSlot').style.display='none'\" style=\"background:none; border:none; font-size:18px; line-height:1; cursor:pointer; color:#664d03; flex-shrink:0;\">×</button></div>"
-}
